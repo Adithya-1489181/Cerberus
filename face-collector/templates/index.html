@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face Collector</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --fg:#e8eaed; --muted:#9aa0a6; --accent:#4f8cff; --ok:#2ecc71; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:14px 20px; border-bottom:1px solid #262a33; font-weight:600; }
+  main { display:grid; grid-template-columns: minmax(0,2fr) minmax(260px,1fr); gap:16px; padding:16px; max-width:1200px; margin:auto; }
+  @media (max-width:800px){ main{ grid-template-columns:1fr; } }
+  .card { background:var(--card); border-radius:12px; padding:14px; }
+  #feed { width:100%; border-radius:8px; background:#000; display:block; aspect-ratio:16/9; }
+  .controls { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  input { flex:1; min-width:140px; padding:10px 12px; border-radius:8px; border:1px solid #333a46; background:#0f1115; color:var(--fg); font-size:16px; }
+  button { padding:10px 20px; border:0; border-radius:8px; background:var(--accent); color:#fff; font-size:16px; font-weight:600; cursor:pointer; }
+  button:active { transform:scale(.97); }
+  #msg { margin-top:10px; min-height:1.3em; color:var(--muted); font-size:14px; }
+  #msg.ok { color:var(--ok); }
+  h3 { margin:0 0 10px; font-size:15px; color:var(--muted); font-weight:600; }
+  .count { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #262a33; }
+  .thumbs { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; }
+  .thumbs img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; }
+  .flash { animation: flash .25s; }
+  @keyframes flash { from { outline:4px solid #fff; } to { outline:4px solid transparent; } }
+</style>
+</head>
+<body>
+<header>Face Collector</header>
+<main>
+  <section class="card">
+    <img id="feed" src="/video_feed" alt="Camera feed">
+    <div class="controls">
+      <input id="label" placeholder="Person name (folder)" value="me" autocomplete="off">
+      <button id="save">Save image (Space)</button>
+    </div>
+    <div id="msg"></div>
+  </section>
+  <aside class="card">
+    <h3>Images per person</h3>
+    <div id="counts"></div>
+    <h3 style="margin-top:16px">Recent</h3>
+    <div class="thumbs" id="thumbs"></div>
+  </aside>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const msg = $('msg');
+
+async function refresh() {
+  const r = await (await fetch('/stats')).json();
+  $('counts').innerHTML = Object.entries(r.counts).map(([k,v]) =>
+    `<div class="count"><span>${k}</span><b>${v}</b></div>`).join('') || '<span style="color:var(--muted)">No images yet</span>';
+  $('thumbs').innerHTML = r.recent.map(i =>
+    `<img src="/dataset/${i.label}/${i.file}" title="${i.label}">`).join('');
+}
+
+async function save() {
+  try {
+    const res = await fetch('/save', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({label: $('label').value})
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+    msg.className = 'ok';
+    msg.textContent = `Saved to ${d.label}/ (${d.counts[d.label]} total)`;
+    $('feed').classList.remove('flash'); void $('feed').offsetWidth; $('feed').classList.add('flash');
+    refresh();
+  } catch (e) { msg.className = ''; msg.textContent = 'Error: ' + e.message; }
+}
+
+$('save').onclick = save;
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && document.activeElement !== $('label')) { e.preventDefault(); save(); }
+});
+refresh();
+</script>
+</body>
+</html>
