@@ -68,7 +68,7 @@ python3 recognize_server.py
 
 It starts a small Flask server on port `5001` and:
 
-- Keeps the camera running in the background (supports the Pi camera module via `picamera2`, falling back to any USB webcam via OpenCV).
+- Keeps the camera running in the background (uses the Pi ribbon camera module via `picamera2`).
 - Exposes `POST /scan` - call it (this is what the ESP32 does) to grab the current frame, detect a face, and run it through the trained model.
 - Responds with JSON, e.g.:
   ```json
