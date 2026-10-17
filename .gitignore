@@ -1,0 +1,6 @@
+esp32/cerberus_esp32/config.h
+
+__pycache__/
+*.pyc
+.venv/
+venv/
