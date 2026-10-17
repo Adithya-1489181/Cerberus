@@ -11,7 +11,6 @@ cd face-collector
 python3 app.py
 ```
 
-If you use a **USB webcam** instead, `pip install -r requirements.txt` is enough (a virtualenv is fine).
 If you create a virtualenv for the Pi camera, use `python3 -m venv --system-site-packages venv` so `picamera2` is visible.
 
 ## Use

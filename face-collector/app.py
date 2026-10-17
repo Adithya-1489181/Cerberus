@@ -29,36 +29,21 @@ class Camera:
     def __init__(self):
         self.lock = threading.Lock()
         self.frame = None
-        self.picam = None
-        self.cap = None
         try:
-            from picamera2 import Picamera2  # Pi camera module (CSI)
+            from picamera2 import Picamera2  # Pi ribbon camera (CSI)
             self.picam = Picamera2()
             cfg = self.picam.create_video_configuration(
                 main={"size": FRAME_SIZE, "format": "RGB888"})
             self.picam.configure(cfg)
             self.picam.start()
-            self.backend = "picamera2"
-        except Exception as e:  # fall back to USB webcam
-            print(f"[camera] picamera2 unavailable ({e}); trying OpenCV/USB webcam")
-            self.cap = cv2.VideoCapture(0)
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_SIZE[0])
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_SIZE[1])
-            if not self.cap.isOpened():
-                raise RuntimeError("No camera found")
-            self.backend = "opencv"
-        print(f"[camera] using {self.backend}")
+        except Exception as e:
+            raise RuntimeError(f"Pi ribbon camera unavailable: {e}") from e
+        print("[camera] using picamera2 (ribbon camera)")
         threading.Thread(target=self._loop, daemon=True).start()
 
     def _loop(self):
         while True:
-            if self.picam is not None:
-                frame = self.picam.capture_array()  # RGB888 => BGR byte order, OpenCV-ready
-            else:
-                ok, frame = self.cap.read()
-                if not ok:
-                    time.sleep(0.1)
-                    continue
+            frame = self.picam.capture_array()  # RGB888 => BGR byte order, OpenCV-ready
             with self.lock:
                 self.frame = frame
 
