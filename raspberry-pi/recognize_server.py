@@ -16,7 +16,7 @@ import threading
 import time
 
 import cv2
-from flask import Flask, jsonify
+from flask import Flask, Response, jsonify
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(HERE, "model")
@@ -122,6 +122,16 @@ def scan():
     if recognized:
         return jsonify(status="recognized", name=name, confidence=round(confidence, 1))
     return jsonify(status="not_recognized", name=name, confidence=round(confidence, 1))
+
+
+@app.route("/snapshot")
+def snapshot():
+    """Latest camera frame as a JPEG - open in a browser to check framing/lighting."""
+    frame = camera.get()
+    if frame is None:
+        return jsonify(status="error", message="camera not ready"), 503
+    ok, buf = cv2.imencode(".jpg", frame)
+    return Response(buf.tobytes(), mimetype="image/jpeg")
 
 
 @app.route("/health")
