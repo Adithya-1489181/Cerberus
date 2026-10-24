@@ -116,7 +116,8 @@ The Pi creates its own WiFi network and the ESP32 joins it. The Pi's address is 
 
 ```bash
 sudo nmcli con add type wifi ifname wlan0 con-name CerberusAP autoconnect yes \
-  ssid CerberusNet mode ap ipv4.method shared ipv4.addresses 192.168.4.1/24 \
+  ssid CerberusNet mode ap wifi.band bg wifi.channel 6 \
+  ipv4.method shared ipv4.addresses 192.168.4.1/24 \
   wifi-sec.key-mgmt wpa-psk wifi-sec.psk "12345678"
 sudo nmcli con up CerberusAP
 ```
@@ -124,7 +125,7 @@ sudo nmcli con up CerberusAP
 - WPA2 needs a password of **8-63 characters**, so the demo password is `12345678`. Change it (and `WIFI_PASSWORD` in `config.h`) before any real use.
 - `wlan0` becomes the access point, so the Pi no longer joins other WiFi on it. Reach the Pi by Ethernet, or by joining `CerberusNet` from your laptop (`ssh pi@192.168.4.1`, `http://192.168.4.1:5001/snapshot`).
 - Optional internet for the Pi: USB tethering from a phone uses the separate `usb0` interface and works alongside the access point.
-- The ESP32 only supports 2.4 GHz WiFi, which is what the access point uses by default.
+- The ESP32 only supports 2.4 GHz WiFi, so the command above forces the access point onto 2.4 GHz (`wifi.band bg`, channel 6). Without it NetworkManager may pick 5 GHz and the ESP32 will never see the network.
 
 ## End-to-end setup order
 
