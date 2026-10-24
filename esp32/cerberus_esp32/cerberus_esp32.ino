@@ -29,13 +29,44 @@ unsigned long lastScanAt = 0;
 bool doorIsOpen = false;
 unsigned long doorOpenedAt = 0;
 
+const char *wifiStatusName(wl_status_t st) {
+  switch (st) {
+    case WL_NO_SSID_AVAIL:   return "NO_SSID_AVAIL (network not seen)";
+    case WL_CONNECT_FAILED:  return "CONNECT_FAILED (wrong password / rejected)";
+    case WL_CONNECTION_LOST: return "CONNECTION_LOST";
+    case WL_DISCONNECTED:    return "DISCONNECTED";
+    case WL_IDLE_STATUS:     return "IDLE";
+    default:                 return "OTHER";
+  }
+}
+
 void connectWiFi() {
-  Serial.printf("Connecting to WiFi '%s'", WIFI_SSID);
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setSleep(false);
+
+  // List what this ESP32 can actually see (it is 2.4 GHz only).
+  Serial.println("Scanning WiFi networks...");
+  int n = WiFi.scanNetworks();
+  bool found = false;
+  for (int i = 0; i < n; i++) {
+    Serial.printf("  %-24s ch%-2d %4d dBm\n", WiFi.SSID(i).c_str(), WiFi.channel(i), WiFi.RSSI(i));
+    if (WiFi.SSID(i) == WIFI_SSID) found = true;
+  }
+  Serial.println(found ? "Target network is visible."
+                       : "Target network NOT visible - check the Pi access point is on 2.4 GHz and in range.");
+
+  // Retry until connected; reset the WiFi stack between attempts.
   while (WiFi.status() != WL_CONNECTED) {
-    delay(300);
-    Serial.print(".");
+    Serial.printf("Connecting to '%s'", WIFI_SSID);
+    WiFi.disconnect(true);
+    delay(200);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) {
+      delay(500);
+      Serial.print(".");
+    }
+    if (WiFi.status() != WL_CONNECTED)
+      Serial.printf("\nFailed, status %d: %s - retrying\n", WiFi.status(), wifiStatusName(WiFi.status()));
   }
   Serial.printf("\nWiFi connected, IP: %s\n", WiFi.localIP().toString().c_str());
 }
