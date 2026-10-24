@@ -26,7 +26,7 @@ Cerberus/
   esp32/                Arduino sketch: ultrasonic sensing + servo door control
 ```
 
-Everything that touches the camera and the trained model lives on the Raspberry Pi; everything that touches the physical door and the ultrasonic sensor lives on the ESP32. They only ever talk to each other over a plain HTTP request on your local WiFi.
+Everything that touches the camera and the trained model lives on the Raspberry Pi; everything that touches the physical door and the ultrasonic sensor lives on the ESP32. They only ever talk to each other over a plain HTTP request over WiFi - by default the Pi's own access point (see [Network setup](#network-setup-pi-as-wifi-access-point)), so no router or phone hotspot is needed.
 
 ## 1. `face-collector/` - build your dataset
 
@@ -106,15 +106,31 @@ An Arduino sketch (`esp32/cerberus_esp32/cerberus_esp32.ino`) for any ESP32 dev 
 ### Build & flash
 
 1. In Arduino IDE, install the **ESP32 board package** and these libraries (Library Manager): `ESP32Servo`, `ArduinoJson`.
-2. Copy `esp32/cerberus_esp32/config.example.h` to `esp32/cerberus_esp32/config.h` and fill in your WiFi SSID/password and the Raspberry Pi's IP address (`hostname -I` on the Pi). `config.h` is gitignored so your WiFi password never gets committed.
+2. Copy `esp32/cerberus_esp32/config.example.h` to `esp32/cerberus_esp32/config.h` and the defaults already match the Pi access point described in [Network setup](#network-setup-pi-as-wifi-access-point) (`CerberusNet`, Pi at `192.168.4.1`), so you normally change nothing. `config.h` is gitignored so any WiFi password you set there never gets committed.
 3. Open `esp32/cerberus_esp32/cerberus_esp32.ino`, select your board/port, and upload.
 4. Open the Serial Monitor at 115200 baud to watch it connect to WiFi, detect visitors, and log the Pi's responses.
+
+## Network setup (Pi as WiFi access point)
+
+The Pi creates its own WiFi network and the ESP32 joins it. The Pi's address is then always `192.168.4.1`, no matter which phone or router is nearby, so nothing needs reconfiguring when you move the project. No internet is required.
+
+```bash
+sudo nmcli con add type wifi ifname wlan0 con-name CerberusAP autoconnect yes \
+  ssid CerberusNet mode ap ipv4.method shared ipv4.addresses 192.168.4.1/24 \
+  wifi-sec.key-mgmt wpa-psk wifi-sec.psk "12345678"
+sudo nmcli con up CerberusAP
+```
+
+- WPA2 needs a password of **8-63 characters**, so the demo password is `12345678`. Change it (and `WIFI_PASSWORD` in `config.h`) before any real use.
+- `wlan0` becomes the access point, so the Pi no longer joins other WiFi on it. Reach the Pi by Ethernet, or by joining `CerberusNet` from your laptop (`ssh pi@192.168.4.1`, `http://192.168.4.1:5001/snapshot`).
+- Optional internet for the Pi: USB tethering from a phone uses the separate `usb0` interface and works alongside the access point.
+- The ESP32 only supports 2.4 GHz WiFi, which is what the access point uses by default.
 
 ## End-to-end setup order
 
 1. Collect photos with `face-collector` (on the Pi) for everyone who should be let in.
 2. Train the model with `model-training/train_model.py` - it feeds `raspberry-pi/model/` automatically.
-3. Start `raspberry-pi/recognize_server.py` on the Pi and sanity-check it with `curl -X POST http://<pi-ip>:5001/scan`.
+3. Start `raspberry-pi/recognize_server.py` on the Pi and sanity-check it with `curl -X POST http://192.168.4.1:5001/scan`.
 4. Flash the ESP32 with your WiFi/Pi settings in `config.h`, wire up the sensor/servo/LEDs, and power it on.
 5. Walk up to the sensor - the door should open for known faces and stay shut (with a red-LED/buzzer denial) for anyone else.
 

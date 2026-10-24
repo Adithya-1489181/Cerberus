@@ -2,12 +2,12 @@
 // config.h is gitignored so your WiFi password never gets committed.
 #pragma once
 
-// ---- WiFi ----
-#define WIFI_SSID     "your-wifi-name"
-#define WIFI_PASSWORD "your-wifi-password"
+// ---- WiFi: the access point created by the Raspberry Pi (see README "Network setup") ----
+#define WIFI_SSID     "CerberusNet"
+#define WIFI_PASSWORD "12345678"   // WPA2 needs at least 8 characters
 
 // ---- Raspberry Pi running raspberry-pi/recognize_server.py ----
-#define PI_HOST "192.168.1.50"   // the Pi's IP address (run `hostname -I` on the Pi)
+#define PI_HOST "192.168.4.1"    // fixed Pi address on its own access point
 #define PI_PORT 5001
 #define PI_SCAN_PATH "/scan"
 
